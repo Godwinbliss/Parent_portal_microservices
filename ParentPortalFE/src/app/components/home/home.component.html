@@ -1,0 +1,33 @@
+<div class="home-container">
+  <div class="hero-section">
+    <h1 class="hero-title">
+      Welcome to FUL Parent Portal
+    </h1>
+    <p class="hero-subtitle">
+      Your single source of truth for all school-related matters.
+    </p>
+  </div>
+
+  <div class="news-section">
+    <h3 class="news-title">Latest News</h3>
+
+    <div *ngIf="newsError()" class="news-error" role="alert">
+      <span>{{ newsError() }}</span>
+    </div>
+
+    <div class="news-grid">
+      <div *ngIf="news().length === 0" class="news-empty">
+        No news announcements available.
+      </div>
+
+      <div *ngFor="let item of news()" class="news-card">
+        <h4>{{ item.title }}</h4>
+        <p>{{ item.content }}</p>
+        <div class="news-meta">
+          <span>by {{ item.authorUsername }}</span>
+          <span>{{ item.publishedDate | date:'mediumDate' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,177 @@
+<div class="max-w-7xl mx-auto p-6 md:p-10">
+  <header class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+    <div>
+      <h1 class="text-4xl font-extrabold text-sky-800 mb-2">Parent Dashboard</h1>
+      <p class="text-gray-600">Welcome back, <span class="text-sky-700 font-bold">{{ authService.currentUser()?.username }}</span>!</p>
+    </div>
+    <div class="mt-4 md:mt-0">
+      <button class="rounded-full bg-white text-sky-700 border border-sky-300 px-4 py-2 text-sm font-semibold shadow hover:bg-sky-50 transition">
+        🔄 Refresh Data
+      </button>
+    </div>
+  </header>
+
+  <!-- Tab Navigation -->
+  <div class="mb-6 border-b border-gray-200">
+    <nav class="flex space-x-8" aria-label="Tabs">
+      <button (click)="selectTab('performance')"
+              [class.active-tab]="activeTab() === 'performance'"
+              class="tab-button">
+        Performance
+      </button>
+      <button (click)="selectTab('fees')"
+              [class.active-tab]="activeTab() === 'fees'"
+              class="tab-button">
+        School Fees
+      </button>
+    </nav>
+  </div>
+
+  <!-- Tab Content -->
+  <div [ngSwitch]="activeTab()">
+    <!-- Student Performance Tab -->
+    <div *ngSwitchCase="'performance'">
+      <section class="dashboard-card">
+        <div class="card-header">
+          <span class="icon">📈</span>
+          <h2>Performance</h2>
+        </div>
+        <p class="text-gray-600 mb-4">Check your child’s academic performance and attendance.</p>
+
+        <select [(ngModel)]="selectedStudentId" (change)="onStudentSelect()" class="dashboard-select mb-4">
+          <option [ngValue]="null">Select a Student</option>
+          <option *ngFor="let student of students()" [ngValue]="student.id">
+            {{ student.firstName }} {{ student.lastName }} ({{ student.studentId }})
+          </option>
+        </select>
+
+        <div *ngIf="selectedStudentId()">
+          <div *ngIf="performanceError()" class="alert alert-error">
+            {{ performanceError() }}
+          </div>
+
+          <!-- Results Table -->
+          <div class="dashboard-subsection">
+            <h3>Results</h3>
+            <div class="performance-table-container">
+              <table class="performance-table">
+                <thead>
+                  <tr>
+                    <th>Course</th>
+                    <th>Grade</th>
+                    <th>Score</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngIf="studentResults().length === 0">
+                    <td colspan="4" class="text-center text-gray-400">No results available.</td>
+                  </tr>
+                  <tr *ngFor="let result of studentResults()">
+                    <td>{{ result.subject }}</td>
+                    <td>{{ result.grade }}</td>
+                    <td>{{ result.score }}%</td>
+                    <td>{{ result.date | date:'mediumDate' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Attendance Table -->
+          <div class="dashboard-subsection">
+            <h3>Attendance</h3>
+            <div class="performance-table-container">
+              <table class="performance-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngIf="studentAttendance().length === 0">
+                    <td colspan="3" class="text-center text-gray-400">No attendance data.</td>
+                  </tr>
+                  <tr *ngFor="let attendance of studentAttendance()">
+                    <td>{{ attendance.date | date:'mediumDate' }}</td>
+                    <td>
+                      <span class="status-tag" [ngClass]="{
+                        'present': attendance.status === 'PRESENT',
+                        'late': attendance.status === 'LATE',
+                        'absent': attendance.status === 'ABSENT'
+                      }">{{ attendance.status }}</span>
+                    </td>
+                    <td>{{ attendance.reason || 'N/A' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- School Fees Tab -->
+    <div *ngSwitchCase="'fees'">
+      <section class="dashboard-card">
+        <div class="card-header">
+          <span class="icon">💰</span>
+          <h2>School Fees</h2>
+        </div>
+        <p class="text-gray-600 mb-4">View and pay fees seamlessly.</p>
+
+        <div class="dashboard-subsection">
+          <h3>Payment History</h3>
+          <div class="overflow-auto rounded-md border border-gray-200 bg-gray-50">
+            <table class="min-w-full text-sm text-left text-gray-700">
+              <thead class="bg-sky-100 font-semibold">
+                <tr>
+                  <th class="px-4 py-2">Student</th>
+                  <th class="px-4 py-2">Amount</th>
+                  <th class="px-4 py-2">Date</th>
+                  <th class="px-4 py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="payments().length === 0">
+                  <td colspan="4" class="text-center text-gray-500 py-3">No payment records.</td>
+                </tr>
+                <tr *ngFor="let payment of payments()" class="border-t hover:bg-gray-100">
+                  <td class="px-4 py-2">{{ getStudentName(payment.studentId) }}</td>
+                  <td class="px-4 py-2 text-green-600 font-semibold">N{{ payment.amount | number:'1.2-2' }}</td>
+                  <td class="px-4 py-2">{{ payment.paymentDate | date:'shortDate' }}</td>
+                  <td class="px-4 py-2">
+                    <span class="status-tag" [ngClass]="{
+                      'success': payment.status === 'SUCCESS',
+                      'pending': payment.status === 'PENDING',
+                      'failed': payment.status === 'FAILED'
+                    }">{{ payment.status }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="dashboard-subsection mt-6">
+          <h3>Make Payment</h3>
+          <form (ngSubmit)="onPayFees()" class="space-y-4">
+            <select [(ngModel)]="paymentForm.studentId" name="studentId" required class="dashboard-select">
+              <option [ngValue]="null">Select Student</option>
+              <option *ngFor="let student of students()" [ngValue]="student.id">
+                {{ student.firstName }} {{ student.lastName }}
+              </option>
+            </select>
+            <input type="number" [(ngModel)]="paymentForm.amount" name="amount" placeholder="Amount (N)" required min="0.01" step="0.01" class="dashboard-input">
+            <input type="text" [(ngModel)]="paymentForm.description" name="description" placeholder="Description" required class="dashboard-input">
+            <button type="submit" class="dashboard-btn bg-green-600 hover:bg-green-700">Pay Now</button>
+          </form>
+          <p *ngIf="paymentMessage()" class="text-green-600 text-sm mt-2 font-medium">{{ paymentMessage() }}</p>
+          <p *ngIf="paymentError()" class="text-red-600 text-sm mt-2 font-medium">{{ paymentError() }}</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>

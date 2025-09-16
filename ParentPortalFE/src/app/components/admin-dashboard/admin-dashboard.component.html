@@ -1,0 +1,396 @@
+<!-- This new container wraps everything -->
+<div>
+  <div class="admin-dashboard">
+    <div class="dashboard-header">
+      <h2>Admin Dashboard</h2>
+      <p>Welcome, <span class="username">{{ authService.currentUser()?.username }}</span>! Manage users and post school news here.</p>
+    </div>
+
+    <nav class="dashboard-nav">
+      <ul>
+        <li (click)="onTabSelect('users')" [class.active]="activeTab() === 'users'">Manage Users</li>
+        <li (click)="onTabSelect('students')" [class.active]="activeTab() === 'students'">Manage Students</li>
+        <li (click)="onTabSelect('records')" [class.active]="activeTab() === 'records'">Manage Records</li>
+        <li (click)="onTabSelect('news')" [class.active]="activeTab() === 'news'">Post News</li>
+      </ul>
+    </nav>
+
+    <div [ngSwitch]="activeTab()" class="dashboard-content">
+      <!-- Manage Users Tab -->
+      <div *ngSwitchCase="'users'" class="users-tab">
+        <div class="card">
+          <h3>🧑‍💻 Manage Users</h3>
+          <p>Add, update, or delete parent and admin accounts.</p>
+
+          <div class="add-user-form">
+            <h4>Add New User</h4>
+            <form (ngSubmit)="onAddUser()">
+              <div class="form-grid">
+                <input type="text" id="newUsername" [(ngModel)]="newUser.username" name="newUsername" placeholder="Username" required>
+                <input type="password" id="newPassword" [(ngModel)]="newUser.password" name="newPassword" placeholder="Password" required>
+                <input type="email" id="newEmail" [(ngModel)]="newUser.email" name="newEmail" placeholder="Email" required>
+                <select id="newRole" [(ngModel)]="newUser.role" name="newRole" required>
+                  <option value="">Select Role</option>
+                  <option value="PARENT">PARENT</option>
+                  <option value="ADMIN">ADMIN</option>
+                </select>
+              </div>
+              <button type="submit">Add User</button>
+              <p *ngIf="userMessage()" class="message">{{ userMessage() }}</p>
+              <p *ngIf="userError()" class="error">{{ userError() }}</p>
+            </form>
+          </div>
+
+          <h4>Existing Users</h4>
+          <div class="user-list">
+            <input type="text" [(ngModel)]="searchQuery.users" name="searchUsers" placeholder="Search users...">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Username</th>
+                  <th>Role</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="filteredUsers().length === 0">
+                  <td colspan="4">No users found.</td>
+                </tr>
+                <tr *ngFor="let user of paginatedUsers()">
+                  <td>{{ user.id }}</td>
+                  <td>{{ user.username }}</td>
+                  <td>
+                    <span [class.parent-role]="user.role === 'PARENT'"
+                          [class.admin-role]="user.role === 'ADMIN'">
+                      {{ user.role }}
+                    </span>
+                  </td>
+                  <td>
+                    <button (click)="onEditUser(user)" class="edit-btn">Edit</button>
+                    <button (click)="onDeleteUser(user.id)" class="delete-btn">Delete</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div *ngIf="totalPages.users() > 1" class="pagination">
+            <button [disabled]="currentPage.users() === 1" (click)="onPageChange('users', currentPage.users() - 1)">Previous</button>
+            <span *ngFor="let page of pageNumbers.users()"
+                  (click)="onPageChange('users', page)"
+                  [class.active]="currentPage.users() === page">
+              {{ page }}
+            </span>
+            <button [disabled]="currentPage.users() === totalPages.users()" (click)="onPageChange('users', currentPage.users() + 1)">Next</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Student Management Tab -->
+      <div *ngSwitchCase="'students'" class="students-tab">
+        <!-- Add Student Section -->
+        <div class="card">
+          <h3>📝 Add Student</h3>
+          <p>Create a new student record and link them to a parent account.</p>
+
+          <form (ngSubmit)="onAddStudent()">
+            <div class="form-grid">
+              <input type="text" id="studentFirstName" [(ngModel)]="newStudent.firstName" name="studentFirstName" placeholder="First Name" required>
+              <input type="text" id="studentLastName" [(ngModel)]="newStudent.lastName" name="studentLastName" placeholder="Last Name" required>
+              <input type="text" id="newStudentId" [(ngModel)]="newStudent.studentId" name="newStudentId" placeholder="Student ID" required>
+              <select [(ngModel)]="newStudent.parentUserId" name="newStudentParentId" required>
+                <option [ngValue]="null">Select Parent User</option>
+                <option *ngFor="let user of parentUsers()" [ngValue]="user.id">
+                  {{ user.username }} (ID: {{ user.id }})
+                </option>
+              </select>
+            </div>
+            <button type="submit" class="success-btn">Add Student</button>
+            <p *ngIf="studentMessage()" class="message">{{ studentMessage() }}</p>
+            <p *ngIf="studentError()" class="error">{{ studentError() }}</p>
+          </form>
+        </div>
+
+        <!-- Existing Students List -->
+        <div class="card">
+          <h4>Existing Students</h4>
+          <div class="student-list">
+            <input type="text" [(ngModel)]="searchQuery.students" name="searchStudents" placeholder="Search students...">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Student ID</th>
+                  <th>Parent ID</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="filteredStudents().length === 0">
+                  <td colspan="5">No students found.</td>
+                </tr>
+                <tr *ngFor="let student of paginatedStudents()">
+                  <td>{{ student.id }}</td>
+                  <td>{{ student.firstName }} {{ student.lastName }}</td>
+                  <td>{{ student.studentId }}</td>
+                  <td>{{ student.parentUserId }}</td>
+                  <td>
+                    <button (click)="onEditStudent(student)" class="edit-btn">Edit</button>
+                    <button (click)="onDeleteStudent(student.id)" class="delete-btn">Delete</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div *ngIf="totalPages.students() > 1" class="pagination">
+            <button [disabled]="currentPage.students() === 1" (click)="onPageChange('students', currentPage.students() - 1)">Previous</button>
+            <span *ngFor="let page of pageNumbers.students()"
+                  (click)="onPageChange('students', page)"
+                  [class.active]="currentPage.students() === page">
+              {{ page }}
+            </span>
+            <button [disabled]="currentPage.students() === totalPages.students()" (click)="onPageChange('students', currentPage.students() + 1)">Next</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Manage Records Tab -->
+      <div *ngSwitchCase="'records'" class="records-tab">
+        <div class="card">
+          <h3>📋 Add Records</h3>
+          <p>Add new results or attendance records for a specific student.</p>
+
+          <div>
+            <h4>Select Student</h4>
+            <select [(ngModel)]="selectedStudentToRecord" name="selectedStudentToRecord">
+              <option [ngValue]="null">--- Select a Student ---</option>
+              <option *ngFor="let student of students()" [ngValue]="student.id">
+                {{ student.firstName }} {{ student.lastName }}
+              </option>
+            </select>
+
+            <div *ngIf="selectedStudentToRecord()">
+              <h5>Add Result</h5>
+              <form (ngSubmit)="onAddResult()">
+                <div class="form-grid">
+                  <input type="text" [(ngModel)]="newResult.subject" name="newResultSubject" placeholder="Subject" required>
+                  <input type="text" [(ngModel)]="newResult.grade" name="newResultGrade" placeholder="Grade" required>
+                  <input type="number" [(ngModel)]="newResult.score" name="newResultScore" placeholder="Score" required>
+                  <input type="date" [(ngModel)]="newResult.date" name="newResultDate" required>
+                </div>
+                <button type="submit">Add Result</button>
+              </form>
+
+              <h5>Add Attendance</h5>
+              <form (ngSubmit)="onAddAttendance()">
+                <div class="form-grid">
+                  <input type="date" [(ngModel)]="newAttendance.date" name="newAttendanceDate" required>
+                  <select [(ngModel)]="newAttendance.status" name="newAttendanceStatus" required>
+                    <option value="">Select Status</option>
+                    <option value="PRESENT">PRESENT</option>
+                    <option value="ABSENT">ABSENT</option>
+                    <option value="LATE">LATE</option>
+                  </select>
+                </div>
+                <input type="text" [(ngModel)]="newAttendance.reason" name="newAttendanceReason" placeholder="Reason (Optional)">
+                <button type="submit">Add Attendance</button>
+              </form>
+
+              <p *ngIf="recordMessage()" class="message">{{ recordMessage() }}</p>
+              <p *ngIf="recordError()" class="error">{{ recordError() }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- List of Student Records with Delete buttons -->
+        <div class="card">
+          <h3>🗑️ Delete Records</h3>
+          <p>Permanently delete results and attendance records.</p>
+
+          <!-- Results Section -->
+          <h4>Results for all Students</h4>
+          <div class="search-control">
+            <input type="text" [(ngModel)]="searchQuery.results" placeholder="Search results by student, subject or grade...">
+          </div>
+          <div class="scrollable-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Subject</th>
+                  <th>Grade</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="filteredResults().length === 0">
+                  <td colspan="5">No results found.</td>
+                </tr>
+                <tr *ngFor="let result of paginatedAllResults()">
+                  <td>{{ getStudentName(result.studentId) }}</td>
+                  <td>{{ result.subject }}</td>
+                  <td>{{ result.grade }}</td>
+                  <td>{{ result.date | date:'shortDate' }}</td>
+                  <td>
+                    <button (click)="onDeleteResult(result.id)" class="delete-btn">Delete</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div *ngIf="totalPages.results() > 1" class="pagination">
+            <button [disabled]="currentPage.results() === 1" (click)="onPageChange('results', currentPage.results() - 1)">Previous</button>
+            <span *ngFor="let page of pageNumbers.results()"
+                  (click)="onPageChange('results', page)"
+                  [class.active]="currentPage.results() === page">
+              {{ page }}
+            </span>
+            <button [disabled]="currentPage.results() === totalPages.results()" (click)="onPageChange('results', currentPage.results() + 1)">Next</button>
+          </div>
+
+          <!-- Attendance Section -->
+          <h4>Attendance for all Students</h4>
+          <div class="search-control">
+            <input type="text" [(ngModel)]="searchQuery.attendance" placeholder="Search attendance by student or status...">
+          </div>
+          <div class="scrollable-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Reason</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="filteredAttendance().length === 0">
+                  <td colspan="5">No attendance records found.</td>
+                </tr>
+                <tr *ngFor="let attendance of paginatedAllAttendance()">
+                  <td>{{ getStudentName(attendance.studentId) }}</td>
+                  <td>{{ attendance.date | date:'shortDate' }}</td>
+                  <td>
+                    <span [class.present-status]="attendance.status === 'PRESENT'"
+                          [class.late-status]="attendance.status === 'LATE'"
+                          [class.absent-status]="attendance.status === 'ABSENT'">
+                      {{ attendance.status }}
+                    </span>
+                  </td>
+                  <td>{{ attendance.reason || '-' }}</td>
+                  <td>
+                    <button (click)="onDeleteAttendance(attendance.id)" class="delete-btn">Delete</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div *ngIf="totalPages.attendance() > 1" class="pagination">
+            <button [disabled]="currentPage.attendance() === 1" (click)="onPageChange('attendance', currentPage.attendance() - 1)">Previous</button>
+            <span *ngFor="let page of pageNumbers.attendance()"
+                  (click)="onPageChange('attendance', page)"
+                  [class.active]="currentPage.attendance() === page">
+              {{ page }}
+            </span>
+            <button [disabled]="currentPage.attendance() === totalPages.attendance()" (click)="onPageChange('attendance', currentPage.attendance() + 1)">Next</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Post News Tab -->
+      <div *ngSwitchCase="'news'" class="news-tab">
+        <div class="card">
+          <h3>📢 Post News</h3>
+          <p>Share important updates with parents and students.</p>
+
+          <form (ngSubmit)="onPostNews()">
+            <div>
+              <label for="newsTitle">Title</label>
+              <input type="text" id="newsTitle" [(ngModel)]="newsForm.title" name="newsTitle" required>
+            </div>
+            <div>
+              <label for="newsContent">Content</label>
+              <textarea id="newsContent" [(ngModel)]="newsForm.content" name="newsContent" rows="5" required></textarea>
+            </div>
+            <div>
+              <label for="newsCategory">Category</label>
+              <input type="text" id="newsCategory" [(ngModel)]="newsForm.category" name="newsCategory" placeholder="e.g., General, Events" required>
+            </div>
+            <button type="submit" class="purple-btn">Post News</button>
+          </form>
+          <p *ngIf="newsMessage()" class="message">{{ newsMessage() }}</p>
+          <p *ngIf="newsError()" class="error">{{ newsError() }}</p>
+        </div>
+      </div>
+
+      <!-- Default Case -->
+      <div *ngSwitchDefault class="empty-state">
+        Select a tab to get started.
+      </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div *ngIf="editingUser()" class="modal">
+      <div class="modal-content">
+        <h3>Edit User: {{ editingUser()?.username }}</h3>
+        <form (ngSubmit)="onUpdateUser()">
+          <div>
+            <label for="editUsername">Username</label>
+            <input type="text" id="editUsername" [(ngModel)]="editingUser()!.username" name="editUsername">
+          </div>
+          <div>
+            <label for="editEmail">Email</label>
+            <input type="email" id="editEmail" [(ngModel)]="editingUser()!.email" name="editEmail">
+          </div>
+          <div>
+            <label for="editRole">Role</label>
+            <select id="editRole" [(ngModel)]="editingUser()!.role" name="editRole">
+              <option value="PARENT">PARENT</option>
+              <option value="ADMIN">ADMIN</option>
+            </select>
+          </div>
+          <div class="modal-actions">
+            <button type="button" (click)="cancelEdit()" class="cancel-btn">Cancel</button>
+            <button type="submit" class="save-btn">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Edit Student Modal -->
+    <div *ngIf="editingStudent()" class="modal">
+      <div class="modal-content">
+        <h3>Edit Student: {{ editingStudent()?.firstName }} {{ editingStudent()?.lastName }}</h3>
+        <form (ngSubmit)="onUpdateStudent()">
+          <div>
+            <label for="editStudentFirstName">First Name</label>
+            <input type="text" id="editStudentFirstName" [(ngModel)]="editingStudent()!.firstName" name="editStudentFirstName">
+          </div>
+          <div>
+            <label for="editStudentLastName">Last Name</label>
+            <input type="text" id="editStudentLastName" [(ngModel)]="editingStudent()!.lastName" name="editStudentLastName">
+          </div>
+          <div>
+            <label for="editStudentId">Student ID</label>
+            <input type="text" id="editStudentId" [(ngModel)]="editingStudent()!.studentId" name="editStudentId">
+          </div>
+          <div>
+            <label for="editStudentParentId">Parent User ID</label>
+            <input type="number" id="editStudentParentId" [(ngModel)]="editingStudent()!.parentUserId" name="editStudentParentId">
+          </div>
+          <div class="modal-actions">
+            <button type="button" (click)="cancelEditStudent()" class="cancel-btn">Cancel</button>
+            <button type="submit" class="save-btn">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,16 @@
+package com.parentportal.student_performance_service.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class StudentUpdateDto {
+
+    private String firstName;
+    private String lastName;
+    private String studentId;
+    private Long parentUserId;
+}

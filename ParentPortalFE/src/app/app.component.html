@@ -1,0 +1,98 @@
+<div class="app-root">
+  <nav class="app-navbar">
+    <div class="navbar-container">
+      <h1 class="navbar-brand">
+        <a href="/home" class="navbar-link">Parent Portal</a>
+      </h1>
+
+      <div *ngIf="authService.isLoggedIn()" class="navbar-user">
+        <span>
+          Logged in as:
+          <span class="username">
+            {{ authService.currentUser()?.username }} ({{ authService.currentUser()?.role }})
+          </span>
+        </span>
+        <button (click)="onLogout()" class="btn btn-logout">
+          Logout
+        </button>
+      </div>
+
+      <div *ngIf="!authService.isLoggedIn()">
+        <button (click)="onLoginClick()" class="btn btn-login">
+          Login
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <ng-container *ngIf="!authService.isLoggedIn() && showLogin()">
+      <app-login></app-login>
+    </ng-container>
+    <ng-container *ngIf="!authService.isLoggedIn() && !showLogin()">
+      <app-home></app-home>
+    </ng-container>
+    <ng-container *ngIf="authService.isLoggedIn() && authService.isParent()">
+      <app-parent-dashboard></app-parent-dashboard>
+    </ng-container>
+    <ng-container *ngIf="authService.isLoggedIn() && authService.isAdmin()">
+      <app-admin-dashboard></app-admin-dashboard>
+    </ng-container>
+  </main>
+
+  <footer class="app-footer">
+    <p>&copy; 2025 Parent Portal. All rights reserved.</p>
+  </footer>
+</div>
+
+<!-- Floating Chat Canva (Global) -->
+<ng-container *ngIf="authService.isLoggedIn()">
+  <button (click)="toggleChat()" class="chat-canva-button">
+    💬
+  </button>
+
+  <div class="chat-panel" [class.open]="isChatOpen()">
+    <div class="chat-panel-header">
+      <h3>{{ authService.isAdmin() ? 'Chat with Parents' : 'Chat with Admin' }}</h3>
+      <button (click)="toggleChat()" class="close-btn">&times;</button>
+    </div>
+    <div class="chat-layout">
+      <div class="user-list">
+        <!-- NEW: Search bar for admins -->
+        <div *ngIf="authService.isAdmin()" class="chat-search-bar">
+          <input type="text" [(ngModel)]="chatSearchQuery" placeholder="Search for a parent...">
+        </div>
+        <ul>
+          <li *ngFor="let user of usersToChatWith()" (click)="selectChatWithUser(user)" [class.active]="selectedChat()?.participant1Id === user.id || selectedChat()?.participant2Id === user.id">
+            {{ user.username }}
+          </li>
+        </ul>
+      </div>
+      <div class="chat-window">
+        <div *ngIf="selectedChat(); else noChatSelected">
+          <div class="chat-window-header">
+             Chat with {{ getChatParticipantName(selectedChat()) }}
+          </div>
+          <div class="messages">
+            <div *ngFor="let message of selectedChat()?.messages" class="message-bubble" [ngClass]="{
+              'sent': message.senderId === authService.currentUser()?.id,
+              'received': message.senderId !== authService.currentUser()?.id
+            }">
+              <div class="message-content">{{ message.content }}</div>
+              <div class="message-timestamp">{{ message.timestamp | date:'shortTime' }}</div>
+            </div>
+          </div>
+          <form class="message-form" (ngSubmit)="onSendMessage()">
+            <input type="text" [(ngModel)]="newMessageContent" name="newMessageContent" placeholder="Type a message..." required>
+            <button type="submit">Send</button>
+          </form>
+        </div>
+        <ng-template #noChatSelected>
+          <div class="no-chat-selected">
+            <p>Select a user to start a conversation.</p>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+</ng-container>
